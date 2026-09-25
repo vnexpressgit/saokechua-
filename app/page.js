@@ -19,7 +19,8 @@ import {
   TrendingUp,
   TrendingDown,
   Layers,
-  Sparkles
+  Sparkles,
+  Landmark
 } from 'lucide-react';
 
 // Dữ liệu mẫu hiển thị khi chưa cấu hình hoặc đang kết nối Supabase
@@ -92,6 +93,8 @@ export default function HomeTransactions() {
   const [configured, setConfigured] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSyncingSepay, setIsSyncingSepay] = useState(false);
+  const [syncToast, setSyncToast] = useState(null);
 
   // Filter & Search
   const [filterType, setFilterType] = useState('ALL'); // 'ALL' | 'IN' | 'OUT'
@@ -156,6 +159,8 @@ export default function HomeTransactions() {
           content,
           category_id,
           note,
+          gateway,
+          code,
           transaction_date,
           created_at,
           categories (
@@ -178,6 +183,38 @@ export default function HomeTransactions() {
     } finally {
       setLoading(false);
       setIsRefreshing(false);
+    }
+  };
+
+  // Đồng bộ giao dịch thật từ SePay API
+  const handleSyncSepay = async () => {
+    try {
+      setIsSyncingSepay(true);
+      const res = await fetch('/api/sepay/sync', { method: 'POST' });
+      const data = await res.json();
+
+      if (data.success) {
+        setSyncToast({
+          message: data.added > 0
+            ? `Thành công: Đã nạp ${data.added} giao dịch mới từ ngân hàng!`
+            : 'Đã đồng bộ: Tất cả giao dịch SePay đã cập nhật mới nhất.',
+          type: 'success',
+        });
+        await fetchData();
+      } else {
+        setSyncToast({
+          message: data.message || 'Lỗi khi đồng bộ SePay',
+          type: 'error',
+        });
+      }
+    } catch (err) {
+      setSyncToast({
+        message: 'Lỗi kết nối tới dịch vụ đồng bộ SePay',
+        type: 'error',
+      });
+    } finally {
+      setIsSyncingSepay(false);
+      setTimeout(() => setSyncToast(null), 4000);
     }
   };
 
@@ -317,12 +354,25 @@ export default function HomeTransactions() {
           </div>
 
           <div className="flex items-center gap-1.5">
+            {/* Nút Đồng bộ SePay ngân hàng thật */}
+            <button
+              onClick={handleSyncSepay}
+              disabled={isSyncingSepay}
+              title="Đồng bộ giao dịch thật từ SePay"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-[11px] font-semibold shadow-md active:scale-95 transition disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${isSyncingSepay ? 'animate-spin' : ''}`}
+              />
+              <span className="hidden sm:inline">Đồng bộ</span> SePay
+            </button>
+
             <button
               onClick={() => {
                 setIsRefreshing(true);
                 fetchData();
               }}
-              title="Đồng bộ Supabase"
+              title="Làm mới Supabase"
               className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 active:scale-95 transition"
             >
               <RefreshCw
@@ -392,6 +442,32 @@ export default function HomeTransactions() {
           </div>
         </div>
       </header>
+
+      {/* Thông báo trạng thái đồng bộ SePay (Toast) */}
+      {syncToast && (
+        <div className="px-4 pt-2">
+          <div
+            className={`p-3 rounded-xl text-xs flex items-center gap-2 border shadow-lg animate-in fade-in slide-in-from-top duration-200 ${
+              syncToast.type === 'success'
+                ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-200'
+                : 'bg-rose-950/80 border-rose-500/40 text-rose-200'
+            }`}
+          >
+            {syncToast.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+            )}
+            <span className="flex-1 font-medium">{syncToast.message}</span>
+            <button
+              onClick={() => setSyncToast(null)}
+              className="text-slate-400 hover:text-white"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 2. THANH BỘ LỌC GIAO DỊCH */}
       <section className="px-4 pt-3 pb-2 flex items-center justify-between">
@@ -482,19 +558,29 @@ export default function HomeTransactions() {
                 {/* Dòng 1: Badge Danh mục & Số tiền */}
                 <div className="flex items-center justify-between gap-2 pl-1 mb-1.5">
                   {/* Badge Danh mục kèm màu động */}
-                  <div
-                    style={{
-                      backgroundColor: `${catColor}18`,
-                      borderColor: `${catColor}40`,
-                      color: catColor,
-                    }}
-                    className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border tracking-tight"
-                  >
-                    <span
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: catColor }}
-                    />
-                    <span>{catName}</span>
+                  <div className="flex items-center gap-1.5">
+                    <div
+                      style={{
+                        backgroundColor: `${catColor}18`,
+                        borderColor: `${catColor}40`,
+                        color: catColor,
+                      }}
+                      className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border tracking-tight"
+                    >
+                      <span
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ backgroundColor: catColor }}
+                      />
+                      <span>{catName}</span>
+                    </div>
+
+                    {/* Badge Ngân hàng SePay (nếu có) */}
+                    {tx.gateway && (
+                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        <Landmark className="w-2.5 h-2.5" />
+                        <span>{tx.gateway}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Số tiền định dạng VND: Đỏ nếu OUT, Xanh nếu IN */}
