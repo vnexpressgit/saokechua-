@@ -184,7 +184,7 @@ export default function AnalyticsPage() {
         .eq('type', 'OUT')
         .order('transaction_date', { ascending: false });
 
-      if (!txError && txData && txData.length > 0) {
+      if (!txError && txData) {
         setTransactions(txData);
       }
     } catch (err) {
