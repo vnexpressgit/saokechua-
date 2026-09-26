@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabaseClient';
 import {
   smartCategorizeTransaction,
   normalizeSePayDateForDb,
+  formatSePayDateTime,
+  cleanBankingPrefix,
 } from '@/lib/aiCategorizer';
 
 export const dynamic = 'force-dynamic';
@@ -16,23 +18,38 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: 'Dữ liệu payload không hợp lệ' }, { status: 400 });
     }
 
-    const sepayId = String(body.id || body.referenceCode || Date.now());
+    const sepayId = String(body.id || '');
+    const referenceCode = String(body.referenceCode || body.reference_number || '');
     const isIncome = (body.transferType || body.transfer_type || '').toLowerCase() === 'in';
     const amount = Number(body.transferAmount || body.amount || body.amount_in || body.amount_out || 0);
     const txType = isIncome ? 'IN' : 'OUT';
     const content = body.content || body.description || body.transaction_content || 'Giao dịch ngân hàng';
+    const rawDate = body.transactionDate || body.transaction_date;
+    const cleanDate = formatSePayDateTime(rawDate);
+    const contentCore = cleanBankingPrefix(content);
 
-    // 1. Kiểm tra chống trùng lặp theo code/sepayId
-    const { data: existing } = await supabase
-      .from('transactions')
-      .select('id')
-      .eq('code', sepayId)
-      .maybeSingle();
+    // 1. Kiểm tra chống trùng lặp đa tiêu chí (Deduplication Check)
+    const { data: existingRows } = await supabase.from('transactions').select('*');
+    const isDuplicate = (existingRows || []).some((row) => {
+      // Tiêu chí 1: Khớp mã SePay hoặc mã tham chiếu ngân hàng
+      if (sepayId && (row.sepay_id === sepayId || row.code === sepayId)) return true;
+      if (referenceCode && (row.code === referenceCode || (row.note && row.note.includes(referenceCode)))) return true;
 
-    if (existing) {
+      // Tiêu chí 2: Khớp bộ nhận diện thực tế (amount + type + transaction_date + content core)
+      const sameAmount = Number(row.amount || 0) === amount;
+      const sameType = row.type === txType;
+      const sameDate = formatSePayDateTime(row.transaction_date) === cleanDate;
+      const rowCore = cleanBankingPrefix(row.content || '');
+      const sameContent = rowCore === contentCore || (row.content && row.content.trim() === content.trim());
+
+      return sameAmount && sameType && sameDate && sameContent;
+    });
+
+    if (isDuplicate) {
+      console.log('Phát hiện giao dịch đã tồn tại trong DB, bỏ qua để tránh nhân bản:', { sepayId, referenceCode, amount, content });
       return NextResponse.json({
         success: true,
-        message: 'Giao dịch đã tồn tại trong hệ thống (Duplicate ignored).',
+        message: 'Giao dịch đã tồn tại trong hệ thống (Đã chống nhân bản thành công).',
       });
     }
 
@@ -41,10 +58,10 @@ export async function POST(request) {
     const aiAnalysis = await smartCategorizeTransaction(content, txType, categories || []);
 
     // 3. Chuẩn hóa định dạng thời gian đúng theo format SePay trả ra (UTC+7)
-    const rawDate = body.transactionDate || body.transaction_date;
     const formattedDateForDb = normalizeSePayDateForDb(rawDate);
 
-    // 4. Chèn giao dịch mới
+    // 4. Chèn giao dịch mới với mã nhận diện duy nhất
+    const primaryCode = referenceCode || sepayId || `WEBHOOK_${Date.now()}`;
     const { error: insertError } = await supabase.from('transactions').insert({
       gateway: body.gateway || body.bank_brand_name || 'Bank',
       transaction_date: formattedDateForDb,
@@ -52,9 +69,10 @@ export async function POST(request) {
       amount: amount,
       type: txType,
       content: content,
-      code: sepayId,
+      code: primaryCode,
+      sepay_id: sepayId || primaryCode,
       category_id: aiAnalysis.categoryId,
-      note: `AI: ${aiAnalysis.inferredText} [${aiAnalysis.categoryName}] • Webhook SePay (${body.gateway || body.bank_brand_name || 'Ngân hàng'}) - Ref: ${body.referenceCode || body.reference_number || 'N/A'}`,
+      note: `AI: ${aiAnalysis.inferredText} [${aiAnalysis.categoryName}] • Webhook SePay (${body.gateway || body.bank_brand_name || 'Ngân hàng'}) - Ref: ${referenceCode || 'N/A'}`,
     });
 
     if (insertError) {
