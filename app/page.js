@@ -345,22 +345,6 @@ export default function HomeTransactions() {
                 className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#b13460]' : ''}`}
               />
             </button>
-
-            {/* Trạng thái kết nối */}
-            <div
-              className={`h-6 px-2 rounded-[4px] font-ui text-[11px] font-medium flex items-center gap-1 border ${
-                configured
-                  ? 'bg-[#d5eddc] text-[#24a148] border-[#24a148]'
-                  : 'bg-[#fce8da] text-[#ee853b] border-[#ee853b]'
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  configured ? 'bg-[#24a148]' : 'bg-[#ee853b]'
-                }`}
-              />
-              <span>{configured ? 'Trực tuyến' : 'Cục bộ'}</span>
-            </div>
           </div>
         </div>
 
