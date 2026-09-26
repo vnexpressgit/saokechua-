@@ -1,19 +1,35 @@
-import { Inter } from "next/font/google";
+import { Merriweather, Merriweather_Sans, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const merriweather = Merriweather({
+  weight: ["400", "700", "900"],
   subsets: ["latin", "vietnamese"],
-  variable: "--font-inter",
+  variable: "--font-merriweather",
+  display: "swap",
+});
+
+const merriweatherSans = Merriweather_Sans({
+  weight: ["400", "500", "700"],
+  subsets: ["latin", "vietnamese"],
+  variable: "--font-merriweather-sans",
+  display: "swap",
+});
+
+const robotoMono = Roboto_Mono({
+  weight: ["400", "500", "700"],
+  subsets: ["latin", "vietnamese"],
+  variable: "--font-roboto-mono",
+  display: "swap",
 });
 
 export const metadata = {
-  title: "Quản Lý Thu Chi - Tự Động Sao Kê",
-  description: "Ứng dụng di động quản lý tài chính cá nhân và sao kê giao dịch thông minh.",
+  title: "VnExpress - Quản Lý Thu Chi & Sao Kê Giao Dịch",
+  description: "Hệ thống quản lý tài chính cá nhân và sao kê giao dịch ngân hàng theo chuẩn thiết kế VnExpress.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Thu Chi",
+    statusBarStyle: "default",
+    title: "VnExpress Thu Chi",
   },
   icons: {
     icon: "/icons/icon-192x192.png",
@@ -22,7 +38,7 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: "#059669",
+  themeColor: "#b13460",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -31,16 +47,19 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="vi" className={`${inter.variable} h-full antialiased`}>
+    <html
+      lang="vi"
+      className={`${merriweather.variable} ${merriweatherSans.variable} ${robotoMono.variable} h-full antialiased`}
+    >
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Thu Chi" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="VnExpress Thu Chi" />
       </head>
-      <body className="min-h-full bg-slate-900 text-slate-100 flex justify-center font-sans antialiased selection:bg-emerald-500 selection:text-white">
-        {/* Container chuẩn Mobile First: max-w-md, căn giữa trên PC màn hình rộng */}
-        <div className="w-full max-w-md min-h-screen bg-slate-950 text-slate-100 shadow-2xl relative flex flex-col border-x border-slate-800/60">
+      <body className="min-h-full bg-[#f3f3f3] text-[#202020] flex justify-center font-sans antialiased selection:bg-[#fce6eb] selection:text-[#b13460]">
+        {/* Khung mobile-first chuẩn VnExpress: phẳng, viền 1px, không đổ bóng */}
+        <div className="w-full max-w-md min-h-screen bg-[#ffffff] text-[#202020] relative flex flex-col border-x border-[#d6d6d6]">
           {children}
         </div>
       </body>

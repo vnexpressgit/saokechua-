@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @layer utilities {
-  /* Ẩn scrollbar cho mobile UI mượt mà */
+  /* Ẩn thanh cuộn nhưng vẫn cuộn được mượt mà */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
@@ -9,16 +9,92 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Quy tắc phông chữ bắt buộc VnExpress */
+  .font-serif {
+    font-family: var(--font-merriweather), Georgia, serif;
+  }
+  .font-ui {
+    font-family: var(--font-merriweather-sans), sans-serif;
+  }
+  .font-sans {
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .font-mono {
+    font-family: var(--font-roboto-mono), monospace;
+  }
+
+  /* Lớp tương tác StateLayer chuẩn VnExpress (100ms transition) */
+  .state-layer {
+    transition: background-color 100ms ease-out;
+  }
+  .state-layer:hover {
+    background-color: rgba(54, 68, 76, 0.08);
+  }
+  .state-layer:active {
+    background-color: rgba(54, 68, 76, 0.18);
+  }
 }
 
 :root {
-  --background: #090d16;
-  --foreground: #f8fafc;
+  /* VnExpress Design System Tokens */
+  --surface-000: #ffffff;
+  --surface-paper: #fcfaf6;
+  --surface-100: #fafafa;
+  --surface-200: #f3f3f3;
+  --surface-300: #ececec;
+
+  --accent-rest: #b13460;
+  --accent-subdued-surface: rgba(177, 52, 96, 0.1);
+  --accent-bright: #df4670;
+  --accent-text: #c14872;
+  --accent-text-strong: #b13460;
+  --accent-surface: #fce6eb;
+
+  --support-rest: #466fa1;
+  --support-text: #365983;
+  --support-surface: #eaf0f8;
+
+  --text-strong: #000000;
+  --text-regular: #202020;
+  --text-regular-lighter: #5f5f5f;
+  --text-subdued: #7f7f7f;
+  --text-subdued-lighter: #9f9f9f;
+
+  --border-subdued-lighter: #f3f3f3;
+  --border-subdued: #d6d6d6;
+  --border-regular: #9f9f9f;
+  --border-strong: #5f5f5f;
+  --border-focus: #0590de;
+
+  --status-info: #0590de;
+  --status-info-surface: #d0eaf9;
+  --status-positive: #24a148;
+  --status-positive-surface: #d5eddc;
+  --status-warning: #ee853b;
+  --status-warning-surface: #fce8da;
+  --status-negative: #da1e28;
+  --status-negative-surface: #f8d4d6;
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: #f3f3f3;
+  color: #202020;
+  font-family: Arial, Helvetica, sans-serif;
+  letter-spacing: 0;
+  line-height: 1.5;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+}
+
+/* VnExpress Flat Rule: Tuyệt đối không dùng đổ bóng trang trí */
+* {
+  box-shadow: none !important;
+}
+
+/* Focus ring hợp lệ duy nhất của VnExpress */
+:focus-visible {
+  outline: none;
+  border-color: #0590de !important;
+  box-shadow: 0 0 8px rgba(66, 144, 217, 0.5) !important;
 }

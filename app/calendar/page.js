@@ -4,34 +4,30 @@ import { useState, useEffect, useMemo } from 'react';
 import BottomNav from '@/components/BottomNav';
 import { supabase } from '@/lib/supabaseClient';
 import {
-  Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
   Plus,
   CheckCircle2,
-  Circle,
   Flag,
   Trash2,
   Banknote,
   Clock,
-  Sparkles,
   CalendarCheck,
-  AlertTriangle,
   ChevronDown,
   ChevronUp,
-  Tag
+  X
 } from 'lucide-react';
 
-// Dữ liệu việc mẫu chuẩn phong cách TickTick tài chính
+// Dữ liệu mẫu chuẩn phong cách biên tập VnExpress
 const INITIAL_DEMO_TASKS = [
   {
     id: 'task-1',
     title: 'Thanh toán tiền điện sinh hoạt EVN',
     amount: 1250000,
-    due_date: new Date(Date.now() + 86400000).toISOString().split('T')[0], // Ngày mai
-    priority: 'high', // 'high' | 'medium' | 'low' | 'none'
+    due_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+    priority: 'high',
     is_completed: false,
-    note: 'Kỳ tháng 9 - Đóng qua app ngân hàng trước ngày 28',
+    note: 'Kỳ tháng 9 - Đóng qua ngân hàng trước ngày 28',
   },
   {
     id: 'task-2',
@@ -40,13 +36,13 @@ const INITIAL_DEMO_TASKS = [
     due_date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
     priority: 'high',
     is_completed: false,
-    note: 'Thanh toán toàn bộ để không bị tính lãi',
+    note: 'Thanh toán toàn bộ để không bị tính lãi phát sinh',
   },
   {
     id: 'task-3',
     title: 'Đóng cước Internet FPT cáp quang',
     amount: 275000,
-    due_date: new Date().toISOString().split('T')[0], // Hôm nay
+    due_date: new Date().toISOString().split('T')[0],
     priority: 'medium',
     is_completed: false,
     note: 'Gói cáp quang gia đình',
@@ -62,7 +58,7 @@ const INITIAL_DEMO_TASKS = [
   },
   {
     id: 'task-5',
-    title: 'Mua gói dịch vụ Cloud lưu trữ',
+    title: 'Mua gói dịch vụ đám mây lưu trữ',
     amount: 69000,
     due_date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
     priority: 'low',
@@ -76,17 +72,16 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true);
 
   // Điều hướng lịch
-  const today = useMemo(() => new Date(), []);
   const [selectedDate, setSelectedDate] = useState(() => {
     return new Date().toISOString().split('T')[0];
   });
   const [currentMonthDate, setCurrentMonthDate] = useState(() => new Date());
-  const [isMonthExpanded, setIsMonthExpanded] = useState(true); // Toggle xem cả tháng hoặc 1 tuần
+  const [isMonthExpanded, setIsMonthExpanded] = useState(true);
 
-  // Bộ lọc danh sách (Smart Filter)
+  // Bộ lọc
   const [filterView, setFilterView] = useState('ALL'); // 'ALL' | 'DATE' | 'TODAY' | 'UPCOMING' | 'COMPLETED'
 
-  // Modal / Form Thêm nhanh
+  // Modal tạo việc
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newAmount, setNewAmount] = useState('');
@@ -94,7 +89,7 @@ export default function CalendarPage() {
   const [newPriority, setNewPriority] = useState('medium');
   const [newNote, setNewNote] = useState('');
 
-  // 1. Tải danh sách Task (ưu tiên Supabase -> fallback localStorage)
+  // 1. Tải danh sách công việc
   useEffect(() => {
     async function loadTasks() {
       setLoading(true);
@@ -107,7 +102,6 @@ export default function CalendarPage() {
         if (!error && data && data.length > 0) {
           setTasks(data);
         } else {
-          // Lấy từ LocalStorage nếu bảng chưa có
           const cached = localStorage.getItem('sepay_financial_tasks');
           if (cached) {
             setTasks(JSON.parse(cached));
@@ -131,7 +125,6 @@ export default function CalendarPage() {
     loadTasks();
   }, []);
 
-  // Lưu vào localStorage dự phòng mỗi khi tasks thay đổi
   const saveTasksState = (updatedList) => {
     setTasks(updatedList);
     try {
@@ -141,7 +134,7 @@ export default function CalendarPage() {
     }
   };
 
-  // Toggle hoàn thành (TickTick Checkbox)
+  // Toggle hoàn thành
   const handleToggleComplete = async (taskId) => {
     const updated = tasks.map((t) =>
       t.id === taskId ? { ...t, is_completed: !t.is_completed } : t
@@ -155,11 +148,11 @@ export default function CalendarPage() {
         .update({ is_completed: target.is_completed })
         .eq('id', taskId);
     } catch (e) {
-      // Ignored if DB table not set up yet
+      // Ignored
     }
   };
 
-  // Xóa task
+  // Xóa công việc
   const handleDeleteTask = async (taskId, e) => {
     e.stopPropagation();
     const updated = tasks.filter((t) => t.id !== taskId);
@@ -172,7 +165,7 @@ export default function CalendarPage() {
     }
   };
 
-  // Thêm task mới
+  // Thêm công việc mới
   const handleCreateTask = async (e) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
@@ -191,13 +184,11 @@ export default function CalendarPage() {
     const updated = [newTask, ...tasks];
     saveTasksState(updated);
 
-    // Reset Form
     setNewTitle('');
     setNewAmount('');
     setNewNote('');
     setShowAddForm(false);
 
-    // Sync Supabase nếu khả dụng
     try {
       await supabase.from('tasks').insert({
         title: newTask.title,
@@ -212,7 +203,6 @@ export default function CalendarPage() {
     }
   };
 
-  // Format tiền tệ VND
   const formatVND = (num) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -220,7 +210,7 @@ export default function CalendarPage() {
     }).format(num || 0);
   };
 
-  // Xây dựng lưới Lịch (Calendar Grid)
+  // Lưới lịch tháng
   const calendarDays = useMemo(() => {
     const year = currentMonthDate.getFullYear();
     const month = currentMonthDate.getMonth();
@@ -228,13 +218,11 @@ export default function CalendarPage() {
     const firstDayOfMonth = new Date(year, month, 1);
     const lastDayOfMonth = new Date(year, month + 1, 0);
 
-    // Bắt đầu từ Thứ 2 (Monday = 1, Sunday = 0)
     let startDayOfWeek = firstDayOfMonth.getDay();
     startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
 
     const days = [];
 
-    // Ngày của tháng trước để lấp đầy hàng đầu
     const prevMonthLastDate = new Date(year, month, 0).getDate();
     for (let i = startDayOfWeek - 1; i >= 0; i--) {
       const d = new Date(year, month - 1, prevMonthLastDate - i);
@@ -245,7 +233,6 @@ export default function CalendarPage() {
       });
     }
 
-    // Các ngày của tháng hiện tại
     for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
       const d = new Date(year, month, i);
       days.push({
@@ -255,8 +242,7 @@ export default function CalendarPage() {
       });
     }
 
-    // Lấp đầy cuối tuần
-    const remainingDays = 42 - days.length; // 6 hàng x 7 ngày
+    const remainingDays = 42 - days.length;
     for (let i = 1; i <= (remainingDays >= 7 ? remainingDays - 7 : remainingDays); i++) {
       const d = new Date(year, month + 1, i);
       days.push({
@@ -269,7 +255,6 @@ export default function CalendarPage() {
     return days;
   }, [currentMonthDate]);
 
-  // Map ngày -> các task trong ngày
   const taskDateMap = useMemo(() => {
     const map = {};
     tasks.forEach((t) => {
@@ -281,7 +266,6 @@ export default function CalendarPage() {
     return map;
   }, [tasks]);
 
-  // Lọc danh sách công việc theo bộ lọc
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   const filteredTasks = useMemo(() => {
@@ -297,7 +281,6 @@ export default function CalendarPage() {
     if (filterView === 'COMPLETED') {
       return tasks.filter((t) => t.is_completed);
     }
-    // Mặc định 'ALL': Ưu tiên các việc chưa xong lên trước
     return [...tasks].sort((a, b) => {
       if (a.is_completed === b.is_completed) {
         return a.due_date.localeCompare(b.due_date);
@@ -306,7 +289,6 @@ export default function CalendarPage() {
     });
   }, [tasks, filterView, selectedDate, todayStr]);
 
-  // Thống kê tiến độ tài chính
   const taskStats = useMemo(() => {
     const totalCount = tasks.length;
     const completedCount = tasks.filter((t) => t.is_completed).length;
@@ -326,7 +308,6 @@ export default function CalendarPage() {
     };
   }, [tasks]);
 
-  // Chuyển tháng
   const handlePrevMonth = () => {
     setCurrentMonthDate(
       new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() - 1, 1)
@@ -345,53 +326,56 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 pb-24">
-      {/* 1. HEADER TICKTICK STYLE */}
-      <header className="px-4 pt-4 pb-3 bg-slate-950 sticky top-0 z-30 border-b border-slate-900 shadow-md">
+    <div className="flex flex-col min-h-screen pb-20 bg-[#ffffff] text-[#202020]">
+      {/* Đường viền nhận diện thương hiệu VnExpress Accent (#b13460) */}
+      <div className="h-[3px] bg-[#b13460] w-full" />
+
+      {/* 1. HEADER: Lịch kế hoạch chi trả */}
+      <header className="px-4 pt-3.5 pb-3 bg-[#ffffff] sticky top-0 z-30 border-b border-[#d6d6d6]">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
-              <CalendarCheck className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                TickTick Planner
+          <div>
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="font-ui text-[11px] font-bold text-[#b13460]">
+                VnExpress
               </span>
-              <h1 className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
-                <span>
-                  Tháng {currentMonthDate.getMonth() + 1}/{currentMonthDate.getFullYear()}
-                </span>
-                <span className="text-[10px] text-slate-400 font-normal">
-                  ({taskStats.completedCount}/{taskStats.totalCount} việc)
-                </span>
-              </h1>
+              <span className="text-[#9f9f9f] text-[10px]">•</span>
+              <span className="font-ui text-[11px] text-[#5f5f5f]">
+                Lịch việc & Hóa đơn
+              </span>
             </div>
+            <h1 className="font-serif text-[18px] font-bold text-[#202020] leading-tight">
+              Tháng {currentMonthDate.getMonth() + 1}/{currentMonthDate.getFullYear()}
+              <span className="font-ui text-[12px] font-normal text-[#7f7f7f] ml-1.5">
+                ({taskStats.completedCount}/{taskStats.totalCount} hoàn thành)
+              </span>
+            </h1>
           </div>
 
           <div className="flex items-center gap-1.5">
             <button
               onClick={handleGoToday}
-              className="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-[11px] font-medium text-slate-300 hover:text-white hover:border-slate-700 active:scale-95 transition"
+              className="h-8 px-2.5 rounded-[8px] bg-[#f3f3f3] hover:bg-[#ececec] border border-[#d6d6d6] text-[#5f5f5f] hover:text-[#202020] font-ui text-[12px] state-layer"
             >
               Hôm nay
             </button>
-            <div className="flex items-center bg-slate-900 rounded-xl border border-slate-800 p-0.5">
+            <div className="flex items-center bg-[#f3f3f3] rounded-[8px] border border-[#d6d6d6] h-8">
               <button
                 onClick={handlePrevMonth}
-                className="p-1.5 text-slate-400 hover:text-white active:scale-90 transition"
+                className="w-7 h-full flex items-center justify-center text-[#5f5f5f] hover:text-[#202020] state-layer"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
+              <div className="w-[1px] h-3 bg-[#d6d6d6]" />
               <button
                 onClick={handleNextMonth}
-                className="p-1.5 text-slate-400 hover:text-white active:scale-90 transition"
+                className="w-7 h-full flex items-center justify-center text-[#5f5f5f] hover:text-[#202020] state-layer"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
             <button
               onClick={() => setIsMonthExpanded(!isMonthExpanded)}
-              className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition"
+              className="h-8 w-8 rounded-[8px] bg-[#f3f3f3] hover:bg-[#ececec] border border-[#d6d6d6] text-[#5f5f5f] flex items-center justify-center state-layer"
               title={isMonthExpanded ? 'Thu gọn lịch' : 'Mở rộng lịch'}
             >
               {isMonthExpanded ? (
@@ -403,16 +387,16 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {/* 2. MINI-CALENDAR GRID (LƯỚI LỊCH THÁNG) */}
+        {/* 2. LƯỚI LỊCH THÁNG (SURFACE PAPER #fcfaf6) */}
         {isMonthExpanded && (
-          <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800/80 shadow-inner mb-2 animate-in fade-in duration-200">
-            {/* Header các ngày trong tuần */}
-            <div className="grid grid-cols-7 gap-1 text-center mb-1.5">
+          <div className="bg-[#fcfaf6] p-3 rounded-[4px] border border-[#d6d6d6] mb-2.5 animate-in fade-in duration-100">
+            {/* Hàng thứ trong tuần */}
+            <div className="grid grid-cols-7 gap-1 text-center mb-1 pb-1 border-b border-[rgba(0,0,0,0.06)]">
               {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((w, idx) => (
                 <span
                   key={w}
-                  className={`text-[10px] font-semibold ${
-                    idx >= 5 ? 'text-rose-400/80' : 'text-slate-400'
+                  className={`font-ui text-[10px] font-bold ${
+                    idx >= 5 ? 'text-[#da1e28]' : 'text-[#5f5f5f]'
                   }`}
                 >
                   {w}
@@ -420,16 +404,16 @@ export default function CalendarPage() {
               ))}
             </div>
 
-            {/* Các ô ngày trong tháng */}
+            {/* Các ngày */}
             <div className="grid grid-cols-7 gap-1">
               {calendarDays.map((item) => {
                 const isSelected = item.date === selectedDate;
                 const isToday = item.date === todayStr;
                 const dayTasks = taskDateMap[item.date] || [];
-                const hasUncompleted = dayTasks.some((t) => !t.is_completed);
                 const hasHighPriority = dayTasks.some(
                   (t) => !t.is_completed && t.priority === 'high'
                 );
+                const hasUncompleted = dayTasks.some((t) => !t.is_completed);
 
                 return (
                   <button
@@ -438,41 +422,34 @@ export default function CalendarPage() {
                       setSelectedDate(item.date);
                       setFilterView('DATE');
                     }}
-                    className={`h-9 rounded-xl flex flex-col items-center justify-center relative transition active:scale-95 ${
+                    className={`h-8 rounded-[4px] flex flex-col items-center justify-center relative transition duration-100 ${
                       isSelected
-                        ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-600/30'
+                        ? 'bg-[#b13460] text-[#ffffff] font-bold'
                         : isToday
-                        ? 'bg-blue-500/20 text-blue-300 font-semibold border border-blue-500/40'
+                        ? 'bg-[#fce6eb] text-[#b13460] font-bold border border-[#b13460]'
                         : item.isCurrentMonth
-                        ? 'text-slate-200 hover:bg-slate-800/70'
-                        : 'text-slate-600 hover:bg-slate-800/40'
+                        ? 'text-[#202020] hover:bg-[#ececec]'
+                        : 'text-[#9f9f9f] hover:bg-[#ececec]'
                     }`}
                   >
-                    <span className="text-xs leading-none">{item.dayNumber}</span>
+                    <span className="font-mono text-[11px] leading-none">
+                      {item.dayNumber}
+                    </span>
 
-                    {/* Dấu chấm chỉ báo công việc (Task Dot Indicator) */}
+                    {/* Chấm chỉ báo */}
                     {dayTasks.length > 0 && (
-                      <div className="flex items-center gap-0.5 mt-1">
+                      <div className="flex items-center gap-0.5 mt-0.5">
                         <span
                           className={`w-1 h-1 rounded-full ${
                             isSelected
-                              ? 'bg-white'
+                              ? 'bg-[#ffffff]'
                               : hasHighPriority
-                              ? 'bg-rose-500 animate-pulse'
+                              ? 'bg-[#da1e28]'
                               : hasUncompleted
-                              ? 'bg-amber-400'
-                              : 'bg-emerald-400'
+                              ? 'bg-[#ee853b]'
+                              : 'bg-[#24a148]'
                           }`}
                         />
-                        {dayTasks.length > 1 && (
-                          <span
-                            className={`text-[8px] leading-none ${
-                              isSelected ? 'text-white' : 'text-slate-400'
-                            }`}
-                          >
-                            {dayTasks.length}
-                          </span>
-                        )}
                       </div>
                     )}
                   </button>
@@ -482,49 +459,49 @@ export default function CalendarPage() {
           </div>
         )}
 
-        {/* 3. THANH TIẾN ĐỘ TÀI CHÍNH (CASHFLOW TASK PROGRESS) */}
-        <div className="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/60 flex items-center justify-between gap-3 text-xs">
+        {/* 3. TIẾN ĐỘ TÀI CHÍNH (SURFACE 100) */}
+        <div className="bg-[#fafafa] p-2.5 rounded-[4px] border border-[#d6d6d6] flex items-center justify-between gap-3 text-xs">
           <div className="flex-1">
             <div className="flex items-center justify-between text-[11px] mb-1">
-              <span className="text-slate-400 font-medium">Hóa đơn cần thanh toán:</span>
-              <span className="font-bold text-rose-400">
+              <span className="font-ui text-[#5f5f5f]">Hóa đơn cần thanh toán:</span>
+              <span className="font-mono font-bold text-[#da1e28]">
                 {formatVND(taskStats.pendingAmount)}
               </span>
             </div>
-            <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-[#ececec] rounded-[2px] overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-blue-500 to-emerald-400 transition-all duration-300"
+                className="h-full bg-[#b13460] transition-all duration-200"
                 style={{ width: `${taskStats.percent}%` }}
               />
             </div>
           </div>
           <div className="text-right shrink-0">
-            <span className="text-xs font-extrabold text-emerald-400">
+            <span className="font-mono text-[13px] font-bold text-[#b13460]">
               {taskStats.percent}%
             </span>
-            <p className="text-[9px] text-slate-400">Hoàn thành</p>
+            <p className="font-ui text-[9px] text-[#7f7f7f]">Đã giải quyết</p>
           </div>
         </div>
       </header>
 
-      {/* 4. SMART FILTERS TICKTICK */}
-      <section className="px-4 pt-3 pb-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar text-xs">
+      {/* 4. THANH BỘ LỌC TABS CHUẨN VNEXPRESS */}
+      <section className="px-4 pt-3 pb-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar text-xs border-b border-[rgba(0,0,0,0.06)]">
         <button
           onClick={() => setFilterView('ALL')}
-          className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition font-medium ${
+          className={`h-8 px-3 rounded-[8px] font-ui text-[12px] whitespace-nowrap transition duration-100 ${
             filterView === 'ALL'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200'
+              ? 'bg-[#ffffff] text-[#202020] font-bold border border-[#9f9f9f]'
+              : 'bg-[#f3f3f3] text-[#5f5f5f] hover:text-[#202020]'
           }`}
         >
           Tất cả ({tasks.length})
         </button>
         <button
           onClick={() => setFilterView('DATE')}
-          className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition font-medium ${
+          className={`h-8 px-3 rounded-[8px] font-ui text-[12px] whitespace-nowrap transition duration-100 ${
             filterView === 'DATE'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200'
+              ? 'bg-[#ffffff] text-[#202020] font-bold border border-[#9f9f9f]'
+              : 'bg-[#f3f3f3] text-[#5f5f5f] hover:text-[#202020]'
           }`}
         >
           Ngày {selectedDate.split('-')[2]}/{selectedDate.split('-')[1]} (
@@ -532,78 +509,74 @@ export default function CalendarPage() {
         </button>
         <button
           onClick={() => setFilterView('TODAY')}
-          className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition font-medium ${
+          className={`h-8 px-3 rounded-[8px] font-ui text-[12px] whitespace-nowrap transition duration-100 ${
             filterView === 'TODAY'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200'
+              ? 'bg-[#ffffff] text-[#202020] font-bold border border-[#9f9f9f]'
+              : 'bg-[#f3f3f3] text-[#5f5f5f] hover:text-[#202020]'
           }`}
         >
           Hôm nay
         </button>
         <button
           onClick={() => setFilterView('UPCOMING')}
-          className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition font-medium ${
+          className={`h-8 px-3 rounded-[8px] font-ui text-[12px] whitespace-nowrap transition duration-100 ${
             filterView === 'UPCOMING'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200'
+              ? 'bg-[#ffffff] text-[#202020] font-bold border border-[#9f9f9f]'
+              : 'bg-[#f3f3f3] text-[#5f5f5f] hover:text-[#202020]'
           }`}
         >
           Chờ nộp
         </button>
         <button
           onClick={() => setFilterView('COMPLETED')}
-          className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition font-medium ${
+          className={`h-8 px-3 rounded-[8px] font-ui text-[12px] whitespace-nowrap transition duration-100 ${
             filterView === 'COMPLETED'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200'
+              ? 'bg-[#ffffff] text-[#202020] font-bold border border-[#9f9f9f]'
+              : 'bg-[#f3f3f3] text-[#5f5f5f] hover:text-[#202020]'
           }`}
         >
           Đã xong
         </button>
       </section>
 
-      {/* 5. DANH SÁCH TASK CHECKLIST (CHUẨN TICKTICK) */}
-      <main className="px-4 py-2 flex-1 space-y-2.5 overflow-y-auto no-scrollbar">
+      {/* 5. DANH SÁCH CÔNG VIỆC CHECKLIST */}
+      <main className="px-4 py-2.5 flex-1 space-y-2 overflow-y-auto no-scrollbar">
         {loading ? (
-          <div className="space-y-2 py-4">
+          <div className="space-y-2 py-2">
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-16 rounded-2xl bg-slate-900/50 border border-slate-800/60 animate-pulse"
+                className="h-16 rounded-[4px] bg-[#fafafa] border border-[#d6d6d6] animate-pulse"
               />
             ))}
           </div>
         ) : filteredTasks.length === 0 ? (
-          <div className="py-16 text-center text-slate-500 text-xs flex flex-col items-center justify-center">
-            <CalendarCheck className="w-9 h-9 text-slate-700 mb-2 stroke-[1.5]" />
-            <p className="font-medium text-slate-400">Không có công việc nào trong danh mục này.</p>
-            <p className="text-[11px] text-slate-500 mt-1">
-              Bấm nút &quot;+ Thêm việc&quot; bên dưới để tạo nhắc nhở mới.
-            </p>
+          <div className="py-16 text-center text-[#7f7f7f] text-xs flex flex-col items-center justify-center">
+            <CalendarCheck className="w-8 h-8 text-[#9f9f9f] mb-2 stroke-[1.5]" />
+            <p className="font-ui">Không có công việc nào trong danh mục này.</p>
           </div>
         ) : (
           filteredTasks.map((task) => {
             const isOverdue = !task.is_completed && task.due_date < todayStr;
             const isToday = task.due_date === todayStr;
 
-            // Màu viền priority TickTick
-            const priorityBorder =
+            const priorityColor =
               task.priority === 'high'
-                ? 'border-rose-500 text-rose-400'
+                ? 'border-[#da1e28] text-[#da1e28]'
                 : task.priority === 'medium'
-                ? 'border-amber-400 text-amber-400'
+                ? 'border-[#ee853b] text-[#ee853b]'
                 : task.priority === 'low'
-                ? 'border-blue-400 text-blue-400'
-                : 'border-slate-500 text-slate-400';
+                ? 'border-[#466fa1] text-[#466fa1]'
+                : 'border-[#9f9f9f] text-[#7f7f7f]';
 
             return (
               <div
                 key={task.id}
                 onClick={() => handleToggleComplete(task.id)}
-                className={`group p-3.5 rounded-2xl border transition active:scale-[0.98] cursor-pointer shadow-sm relative overflow-hidden flex items-start gap-3 ${
+                className={`p-3 rounded-[4px] border transition duration-100 cursor-pointer flex items-start gap-2.5 ${
                   task.is_completed
-                    ? 'bg-slate-950/60 border-slate-900 text-slate-500 opacity-60'
-                    : 'bg-slate-900/80 hover:bg-slate-900 border-slate-800/80 text-slate-200'
+                    ? 'bg-[#fafafa] border-[#d6d6d6] opacity-60'
+                    : 'bg-[#ffffff] hover:bg-[#fafafa] border-[#d6d6d6] hover:border-[#9f9f9f]'
                 }`}
               >
                 {/* Checkbox tròn TickTick */}
@@ -613,77 +586,76 @@ export default function CalendarPage() {
                     e.stopPropagation();
                     handleToggleComplete(task.id);
                   }}
-                  className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center transition shrink-0 ${
+                  className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center transition shrink-0 ${
                     task.is_completed
-                      ? 'bg-emerald-500 border-emerald-500 text-slate-950 shadow-sm'
-                      : `bg-transparent hover:bg-slate-800 ${priorityBorder}`
+                      ? 'bg-[#24a148] border-[#24a148] text-[#ffffff]'
+                      : `bg-transparent ${priorityColor}`
                   }`}
                 >
                   {task.is_completed && <CheckCircle2 className="w-3.5 h-3.5 fill-current" />}
                 </button>
 
-                {/* Nội dung Task */}
+                {/* Nội dung việc */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center justify-between gap-2 mb-0.5">
                     <h3
-                      className={`text-xs font-semibold tracking-tight truncate ${
-                        task.is_completed ? 'line-through text-slate-500' : 'text-slate-100'
+                      className={`font-ui text-[13px] font-bold truncate ${
+                        task.is_completed
+                          ? 'line-through text-[#7f7f7f]'
+                          : 'text-[#202020]'
                       }`}
                     >
                       {task.title}
                     </h3>
 
-                    {/* Số tiền dự kiến */}
                     {task.amount > 0 && (
                       <span
-                        className={`text-xs font-bold tracking-tight shrink-0 flex items-center gap-1 ${
-                          task.is_completed ? 'text-slate-500' : 'text-rose-400'
+                        className={`font-mono text-[13px] font-bold shrink-0 flex items-center gap-1 ${
+                          task.is_completed ? 'text-[#7f7f7f]' : 'text-[#da1e28]'
                         }`}
                       >
-                        <Banknote className="w-3 h-3 text-rose-400/80" />
+                        <Banknote className="w-3 h-3 text-[#da1e28]" />
                         {formatVND(task.amount)}
                       </span>
                     )}
                   </div>
 
-                  {/* Note nếu có */}
                   {task.note && (
-                    <p className="text-[11px] text-slate-400 mb-1.5 truncate">{task.note}</p>
+                    <p className="font-sans text-[12px] text-[#5f5f5f] mb-1 truncate">
+                      {task.note}
+                    </p>
                   )}
 
-                  {/* Metadata (Hạn chót & Priority) */}
-                  <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-800/40">
+                  {/* Metadata */}
+                  <div className="flex items-center justify-between text-[10px] pt-1 border-t border-[rgba(0,0,0,0.06)]">
                     <div className="flex items-center gap-2">
-                      {/* Ngày hạn */}
                       <span
-                        className={`flex items-center gap-1 font-medium ${
+                        className={`font-mono flex items-center gap-1 ${
                           isOverdue
-                            ? 'text-rose-400 font-bold'
+                            ? 'text-[#da1e28] font-bold'
                             : isToday
-                            ? 'text-amber-400 font-bold'
-                            : 'text-slate-400'
+                            ? 'text-[#ee853b] font-bold'
+                            : 'text-[#7f7f7f]'
                         }`}
                       >
                         <Clock className="w-2.5 h-2.5" />
                         {isOverdue
-                          ? `Quá hạn (${task.due_date})`
+                          ? `Quá hạn: ${task.due_date}`
                           : isToday
                           ? 'Hôm nay'
                           : `Hạn: ${task.due_date}`}
                       </span>
 
-                      {/* Cờ Priority */}
-                      <span className={`flex items-center gap-0.5 ${priorityBorder}`}>
+                      <span className={`font-ui flex items-center gap-0.5 ${priorityColor}`}>
                         <Flag className="w-2.5 h-2.5" />
                         <span className="capitalize text-[9px]">{task.priority}</span>
                       </span>
                     </div>
 
-                    {/* Nút xóa */}
                     <button
                       onClick={(e) => handleDeleteTask(task.id, e)}
                       title="Xóa công việc"
-                      className="text-slate-500 hover:text-rose-400 p-1 rounded-lg transition"
+                      className="text-[#9f9f9f] hover:text-[#da1e28] p-0.5 rounded transition"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -695,58 +667,58 @@ export default function CalendarPage() {
         )}
       </main>
 
-      {/* 6. NÚT NỔI THÊM VIỆC (QUICK ADD BUTTON) */}
-      <div className="fixed bottom-20 right-4 z-40 max-w-md">
+      {/* 6. NÚT TẠO VIỆC NHANH (Accent Rest #b13460, Height 36px, Radius 8px) */}
+      <div className="fixed bottom-16 right-4 z-30 max-w-md">
         <button
           onClick={() => {
             setNewDueDate(selectedDate || todayStr);
             setShowAddForm(true);
           }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-xl active:scale-95 transition"
+          className="h-9 px-3.5 rounded-[8px] bg-[#b13460] hover:bg-[#a02e55] active:bg-[#8f274a] text-[#ffffff] font-ui text-[13px] font-bold flex items-center gap-1.5 state-layer"
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>Thêm việc</span>
         </button>
       </div>
 
-      {/* 7. MODAL THÊM CÔNG VIỆC MỚI (TICKTICK QUICK ADD MODAL) */}
+      {/* 7. MODAL THÊM CÔNG VIỆC MỚI */}
       {showAddForm && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4 animate-in fade-in duration-100">
+          <div className="w-full max-w-md bg-[#ffffff] border border-[#d6d6d6] rounded-t-[8px] sm:rounded-[4px] p-4 space-y-3.5">
+            <div className="flex items-center justify-between pb-2 border-b border-[#d6d6d6]">
               <div className="flex items-center gap-2">
-                <CalendarCheck className="w-4 h-4 text-blue-400" />
-                <h2 className="text-sm font-bold text-white">Thêm việc cần chi / Hạn nộp</h2>
+                <span className="w-2 h-2 rounded-full bg-[#b13460]" />
+                <h3 className="font-serif text-[16px] font-bold text-[#202020]">
+                  Thêm việc cần chi / Hóa đơn
+                </h3>
               </div>
               <button
                 onClick={() => setShowAddForm(false)}
-                className="text-slate-400 hover:text-white text-xs p-1"
+                className="text-[#7f7f7f] hover:text-[#000000] p-1"
               >
-                Đóng
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateTask} className="space-y-3.5">
-              {/* Tiêu đề việc */}
+            <form onSubmit={handleCreateTask} className="space-y-3">
               <div>
-                <label className="text-[11px] font-medium text-slate-400 mb-1 block">
+                <label className="font-ui text-[12px] font-medium text-[#5f5f5f] mb-1 block">
                   Tên công việc / Hóa đơn *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="VD: Đóng tiền mạng FPT, Đáo hạn thẻ tín dụng..."
+                  placeholder="VD: Đóng tiền điện EVN, Đáo hạn thẻ tín dụng..."
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                  className="w-full h-10 bg-[#fafafa] border border-[#9f9f9f] rounded-[4px] px-3 font-sans text-[13px] text-[#202020] focus:border-[#0590de]"
                   autoFocus
                 />
               </div>
 
-              {/* Số tiền dự kiến & Ngày hạn */}
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[11px] font-medium text-slate-400 mb-1 block">
+                  <label className="font-ui text-[12px] font-medium text-[#5f5f5f] mb-1 block">
                     Số tiền dự kiến (₫)
                   </label>
                   <input
@@ -754,11 +726,11 @@ export default function CalendarPage() {
                     placeholder="VD: 500000"
                     value={newAmount}
                     onChange={(e) => setNewAmount(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                    className="w-full h-10 bg-[#fafafa] border border-[#9f9f9f] rounded-[4px] px-3 font-mono text-[13px] text-[#202020] focus:border-[#0590de]"
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-medium text-slate-400 mb-1 block">
+                  <label className="font-ui text-[12px] font-medium text-[#5f5f5f] mb-1 block">
                     Ngày hết hạn *
                   </label>
                   <input
@@ -766,30 +738,29 @@ export default function CalendarPage() {
                     required
                     value={newDueDate}
                     onChange={(e) => setNewDueDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                    className="w-full h-10 bg-[#fafafa] border border-[#9f9f9f] rounded-[4px] px-3 font-mono text-[13px] text-[#202020] focus:border-[#0590de]"
                   />
                 </div>
               </div>
 
-              {/* Mức độ ưu tiên (Priority) */}
               <div>
-                <label className="text-[11px] font-medium text-slate-400 mb-1 block">
+                <label className="font-ui text-[12px] font-medium text-[#5f5f5f] mb-1 block">
                   Mức độ ưu tiên
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: 'high', label: '🔴 Cao', color: 'border-rose-500' },
-                    { id: 'medium', label: '🟡 Vừa', color: 'border-amber-400' },
-                    { id: 'low', label: '🔵 Thấp', color: 'border-blue-400' },
+                    { id: 'high', label: 'Cao (Đỏ)', color: 'text-[#da1e28]' },
+                    { id: 'medium', label: 'Vừa (Cam)', color: 'text-[#ee853b]' },
+                    { id: 'low', label: 'Thấp (Xanh)', color: 'text-[#466fa1]' },
                   ].map((p) => (
                     <button
                       key={p.id}
                       type="button"
                       onClick={() => setNewPriority(p.id)}
-                      className={`py-1.5 rounded-xl text-xs font-semibold border transition ${
+                      className={`h-9 rounded-[8px] font-ui text-[12px] font-bold border transition duration-100 ${
                         newPriority === p.id
-                          ? 'bg-slate-800 border-blue-500 text-white shadow-sm'
-                          : 'bg-slate-950 border-slate-800 text-slate-400'
+                          ? 'bg-[#ffffff] border-[#b13460] text-[#b13460]'
+                          : 'bg-[#f3f3f3] border-[#d6d6d6] text-[#5f5f5f]'
                       }`}
                     >
                       {p.label}
@@ -798,32 +769,30 @@ export default function CalendarPage() {
                 </div>
               </div>
 
-              {/* Ghi chú */}
               <div>
-                <label className="text-[11px] font-medium text-slate-400 mb-1 block">
+                <label className="font-ui text-[12px] font-medium text-[#5f5f5f] mb-1 block">
                   Ghi chú thêm
                 </label>
                 <input
                   type="text"
-                  placeholder="Ghi chú tài khoản, số hợp đồng..."
+                  placeholder="Ghi chú số hợp đồng, tài khoản..."
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                  className="w-full h-10 bg-[#fafafa] border border-[#9f9f9f] rounded-[4px] px-3 font-sans text-[13px] text-[#202020] focus:border-[#0590de]"
                 />
               </div>
 
-              {/* Nút Submit */}
-              <div className="pt-2 flex gap-2">
+              <div className="flex gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="flex-1 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-medium hover:bg-slate-700 transition"
+                  className="flex-1 h-10 rounded-[8px] bg-[#f3f3f3] hover:bg-[#ececec] border border-[#d6d6d6] text-[#5f5f5f] font-ui text-[13px] font-medium state-layer"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition shadow-lg shadow-blue-600/30"
+                  className="flex-1 h-10 rounded-[8px] bg-[#b13460] hover:bg-[#a02e55] active:bg-[#8f274a] text-[#ffffff] font-ui text-[13px] font-bold state-layer"
                 >
                   Tạo nhắc nhở
                 </button>
@@ -833,7 +802,7 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {/* 8. THANH ĐIỀU HƯỚNG DƯỚI (BOTTOM NAV) */}
+      {/* 8. THANH ĐIỀU HƯỚNG DƯỚI */}
       <BottomNav />
     </div>
   );
