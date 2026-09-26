@@ -55,3 +55,22 @@ VALUES
 (1500000, 'OUT', 'EVN HANOI TIEN DIEN KY 08/2026', 3, 'Tiền điện sinh hoạt gia đình', NOW() - INTERVAL '2 days'),
 (75000, 'OUT', 'BE GROUP - CUOC XE 4 CHO TU NHA DEN CONG TY', 4, 'Đi làm trời mưa', NOW() - INTERVAL '1 day'),
 (3000000, 'IN', 'NGUYEN VAN B CHUYEN TIEN DUA ANH FREELANCE', 2, 'Dự án sao kê tự động', NOW() - INTERVAL '3 days');
+
+-- 7. Bảng công việc & nhắc nhở tài chính (TickTick Task Planner)
+CREATE TABLE IF NOT EXISTS public.tasks (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    title TEXT NOT NULL,
+    amount NUMERIC(15, 2) DEFAULT 0,
+    due_date DATE NOT NULL,
+    priority VARCHAR(10) DEFAULT 'medium' CHECK (priority IN ('high', 'medium', 'low', 'none')),
+    is_completed BOOLEAN DEFAULT FALSE,
+    category_id BIGINT REFERENCES public.categories(id) ON DELETE SET NULL,
+    note TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read tasks" ON public.tasks FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Public insert tasks" ON public.tasks FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Public update tasks" ON public.tasks FOR UPDATE TO anon, authenticated USING (true);
+CREATE POLICY "Public delete tasks" ON public.tasks FOR DELETE TO anon, authenticated USING (true);
