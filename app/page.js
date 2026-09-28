@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import BottomNav from '@/components/BottomNav';
+import OcrUploadModal from '@/components/OcrUploadModal';
+import QrScanModal from '@/components/QrScanModal';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import {
   ArrowDownLeft,
@@ -71,6 +73,10 @@ export default function HomeTransactions() {
   const [editNote, setEditNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Modal OCR & QR
+  const [isOcrOpen, setIsOcrOpen] = useState(false);
+  const [isQrOpen, setIsQrOpen] = useState(false);
 
   // Format tiền tệ VND (Font số: Roboto Mono)
   const formatVND = (num) => {
@@ -176,6 +182,37 @@ export default function HomeTransactions() {
       setIsSyncingSepay(false);
       setTimeout(() => setSyncToast(null), 4000);
     }
+  };
+
+  // Lưu giao dịch từ OCR vào Supabase
+  const handleSaveOcrTransaction = async (txData) => {
+    if (configured) {
+      const { error } = await supabase.from('transactions').insert([
+        {
+          amount: txData.amount,
+          type: txData.type,
+          content: txData.content,
+          category_id: txData.category_id || null,
+          note: txData.note || null,
+          gateway: txData.gateway || 'OCR Upload',
+          transaction_date: txData.transaction_date || new Date().toISOString(),
+          code: txData.code || null,
+        },
+      ]);
+      if (error) throw error;
+    }
+    // Cập nhật UI ngay lập tức (optimistic)
+    const chosenCategory = categories.find((c) => String(c.id) === String(txData.category_id));
+    setTransactions((prev) => [
+      {
+        id: 'ocr-' + Date.now(),
+        ...txData,
+        categories: chosenCategory || null,
+        created_at: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+    await fetchData(); // đồng bộ lại toàn bộ
   };
 
   useEffect(() => {
@@ -657,7 +694,25 @@ export default function HomeTransactions() {
       )}
 
       {/* 5. THANH ĐIỀU HƯỚNG DƯỚI */}
-      <BottomNav />
+      <BottomNav
+        onOpenQr={() => setIsQrOpen(true)}
+        onOpenOcr={() => setIsOcrOpen(true)}
+      />
+
+      {/* 6. MODAL OCR UPLOAD */}
+      <OcrUploadModal
+        isOpen={isOcrOpen}
+        onClose={() => setIsOcrOpen(false)}
+        categories={categories}
+        onSave={handleSaveOcrTransaction}
+      />
+
+      {/* 7. MODAL QR SCAN */}
+      <QrScanModal
+        isOpen={isQrOpen}
+        onClose={() => setIsQrOpen(false)}
+        categories={categories}
+      />
     </div>
   );
 }
